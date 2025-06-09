@@ -1,0 +1,5 @@
+Following are the changes, that are made from the original project:
+
+- nemo/graph.py:
+    - Constructor of "DeployGraph" compatible with torch >= 1.10.0
+

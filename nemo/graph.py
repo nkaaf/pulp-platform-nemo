@@ -1,8 +1,10 @@
 #
 # graph.py
 # Francesco Conti <fconti@iis.ee.ethz.ch>
+# Niklas Kaaf <nkaaf@protonmail.com>
 #
 # Copyright (C) 2018-2020 ETH Zurich
+# Copyright (C) 2025 Niklas Kaaf
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -140,7 +142,11 @@ class DeployGraph(object):
                 try:
                     graph, _params_dict, _torch_out = torch.onnx.utils._model_to_graph(module, dummy_input, propagate=True, _retain_param_name=True)
                 except TypeError:
-                    graph, _params_dict, _torch_out = torch.onnx.utils._model_to_graph(module, dummy_input, _retain_param_name=True)
+                    try:
+                        graph, _params_dict, _torch_out = torch.onnx.utils._model_to_graph(module, dummy_input, _retain_param_name=True)
+                    except TypeError:
+                        # torch >= 1.10.0
+                        graph, _params_dict, _torch_out = torch.onnx.utils._model_to_graph(module, dummy_input)
         input_dict = {}
         output_dict = {}
         self.non_unique_names_dict = {}
