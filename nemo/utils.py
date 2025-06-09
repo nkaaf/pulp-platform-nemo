@@ -85,7 +85,7 @@ def export_onnx(file_name, net, net_inner, input_shape, device, round_params=Tru
     if round_params:
         for param in net_inner.parameters(recurse=True):
             if param.dtype is torch.float32:
-                param[:] = torch.round(param)
+                param.data = torch.round(param.data)
     if redefine_names:
         input_names  = [ 'input' ] + [ pattern.sub('_', n) for n,_ in net_inner.named_parameters() ]
         output_names = [ 'output' ]

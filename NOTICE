@@ -6,6 +6,7 @@ Following are the changes, that are made to the original implementation:
     - Add "device" parameter to quantization steps
 - nemo/utils.py:
     - Add "device" parameter to export step
+    - Fix "RuntimeError: a view of a leaf Variable that requires grad is being used in an in-place operation" is fixed
 - nemo/quant/pact.py:
     - Add "device" parameter to quantization steps
 
