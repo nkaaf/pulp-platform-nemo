@@ -1,5 +1,9 @@
-Following are the changes, that are made from the original project:
+Following are the changes, that are made to the original implementation:
 
 - nemo/graph.py:
     - Constructor of "DeployGraph" compatible with torch >= 1.10.0
+- nemo/transform.py:
+    - Add "device" parameter to quantization steps
+- nemo/quant/pact.py:
+    - Add "device" parameter to quantization steps
 

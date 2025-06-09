@@ -3,9 +3,11 @@
 # Francesco Conti <fconti@iis.ee.ethz.ch>
 # Alfio Di Mauro <adimauro@iis.ee.ethz.ch>
 # Thorir Mar Ingolfsson <thoriri@iis.ee.ethz.ch>
+# Niklas Kaaf <nkaaf@protonmail.com>
 #
 # Copyright (C) 2018-2021 ETH Zurich
-# 
+# Copyright (C) 2025 Niklas Kaaf
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -321,10 +323,11 @@ class PACT_Act(torch.nn.Module):
 
     """
 
-    def __init__(self, precision=None, alpha=1., backprop_alpha=True, statistics_only=False, leaky=None, requantization_factor=DEFAULT_ACT_REQNT_FACTOR):
+    def __init__(self, device, precision=None, alpha=1., backprop_alpha=True, statistics_only=False, leaky=None, requantization_factor=DEFAULT_ACT_REQNT_FACTOR):
         r"""Constructor. Initializes a :py:class:`torch.nn.Parameter` for :math:`\alpha` and sets
             up the initial value of the `statistics_only` member.
 
+        :param device: device used for quantization.
         :param precision: instance defining the current quantization level (default `None`).
         :type  precision: :py:class:`nemo.precision.Precision`
         :param alpha: the value of :math:`\alpha`.
@@ -336,12 +339,11 @@ class PACT_Act(torch.nn.Module):
 
         """
 
-        super(PACT_Act, self).__init__()
+        super(PACT_Act, self).__init__(device)
         if precision is None:
             self.precision = Precision()
         else:
             self.precision = Precision(bits=precision.get_bits())
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.alpha = torch.nn.Parameter(torch.Tensor((alpha,)).to(device), requires_grad=backprop_alpha)
         self.alpha_p = alpha
         self.statistics_only = statistics_only
@@ -468,7 +470,6 @@ class PACT_IntegerAdd(torch.nn.Module):
             self.precision = Precision(bits=8)
         else:
             self.precision = Precision(bits=precision.get_bits())
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         self.requantization_factor = requantization_factor
         self.deployment = False
@@ -588,7 +589,6 @@ class PACT_IntegerAct(torch.nn.Module):
             self.precision = Precision(bits=16)
         else:
             self.precision = Precision(bits=precision.get_bits())
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         self.alpha = torch.nn.Parameter(alpha)
 
@@ -668,10 +668,11 @@ class PACT_ThresholdAct(torch.nn.Module):
 
     """
 
-    def __init__(self, precision=None, alpha=1., nb_channels=1):
+    def __init__(self, device, precision=None, alpha=1., nb_channels=1):
         r"""Constructor. Initializes a :py:class:`torch.nn.Parameter` for :math:`\alpha` and the target
         number of channels.
 
+        :param device: device used for quantization.
         :param precision: instance defining the current quantization level (default `None`).
         :type  precision: :py:class:`nemo.precision.Precision`
         :param alpha: the value of :math:`\alpha`.
@@ -683,7 +684,6 @@ class PACT_ThresholdAct(torch.nn.Module):
             self.precision = Precision()
         else:
             self.precision = Precision(bits=precision.get_bits())
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         self.alpha = torch.nn.Parameter(alpha)
 
@@ -721,9 +721,10 @@ class PACT_QuantizedBatchNormNd(torch.nn.Module):
 
     """
 
-    def __init__(self, precision=None, kappa=None, lamda=None, nb_channels=1, statistics_only=False, dimensions=2, **kwargs):
+    def __init__(self, device, precision=None, kappa=None, lamda=None, nb_channels=1, statistics_only=False, dimensions=2, **kwargs):
         r"""Constructor.
 
+        :param device: device used for quantization.
         :param precision_kappa: instance defining the current quantization level (default `None`).
         :type  precision_kappa: :py:class:`nemo.precision.Precision`
         :param precision_lamda: instance defining the current quantization level (default `None`).
@@ -748,7 +749,6 @@ class PACT_QuantizedBatchNormNd(torch.nn.Module):
         else:
             self.precision_kappa = Precision(bits=precision.get_bits())
             self.precision_lamda = Precision(bits=precision.get_bits())
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         if dimensions == 2:
             param_shape = lambda n : (1, n, 1, 1)
@@ -975,6 +975,7 @@ class PACT_Conv2d(torch.nn.Conv2d):
         in_channels,
         out_channels,
         kernel_size,
+        device,
         quantize_x=False,
         quantize_W=True,
         quantize_y=False,
@@ -986,6 +987,7 @@ class PACT_Conv2d(torch.nn.Conv2d):
     ):
         r"""Constructor. Supports all arguments supported by :py:class:`torch.nn.Conv2d` plus additional ones.
 
+        :param device: device used for quantization.
         :param quantize_x: if True, quantize input activations (default False).
         :type  quantize_x: bool
         :param quantize_W: if True, quantize weights (default True).
@@ -1012,7 +1014,6 @@ class PACT_Conv2d(torch.nn.Conv2d):
         self.quantize_W = quantize_W
 
         super(PACT_Conv2d, self).__init__(in_channels, out_channels, kernel_size, **kwargs)
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.W_alpha = torch.nn.Parameter(torch.Tensor((alpha,)).to(device))
         if quant_asymm:
             self.W_beta  = torch.nn.Parameter(torch.Tensor((alpha,)).to(device))
@@ -1206,6 +1207,7 @@ class PACT_Conv1d(torch.nn.Conv1d):
         in_channels,
         out_channels,
         kernel_size,
+        device,
         quantize_x=False,
         quantize_W=True,
         W_precision=None,
@@ -1216,6 +1218,7 @@ class PACT_Conv1d(torch.nn.Conv1d):
     ):
         r"""Constructor. Supports all arguments supported by :py:class:`torch.nn.Conv2d` plus additional ones.
 
+        :param device: device used for quantization.
         :param quantize_x: if True, quantize input activations (default False).
         :type  quantize_x: bool
         :param quantize_W: if True, quantize weights (default True).
@@ -1242,7 +1245,6 @@ class PACT_Conv1d(torch.nn.Conv1d):
         self.quantize_x = quantize_x
         self.quantize_W = quantize_W
         super(PACT_Conv1d, self).__init__(in_channels, out_channels, kernel_size, **kwargs)
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.W_alpha = torch.nn.Parameter(torch.Tensor((alpha,)).to(device))
         if quant_asymm:
             self.W_beta  = torch.nn.Parameter(torch.Tensor((alpha,)).to(device))
@@ -1373,6 +1375,7 @@ class PACT_Linear(torch.nn.Linear):
         self,
         in_features,
         out_features,
+        device,
         quantize_x=False,
         quantize_W=True,
         W_precision=None,
@@ -1394,7 +1397,6 @@ class PACT_Linear(torch.nn.Linear):
         self.quantize_x = quantize_x
         self.quantize_W = quantize_W
         super(PACT_Linear, self).__init__(in_features, out_features, **kwargs)
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.W_alpha = torch.nn.Parameter(torch.Tensor((alpha,)).to(device))
         if quant_asymm:
             self.W_beta  = torch.nn.Parameter(torch.Tensor((alpha,)).to(device))

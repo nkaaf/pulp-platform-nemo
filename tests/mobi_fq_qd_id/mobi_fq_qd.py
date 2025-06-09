@@ -143,7 +143,7 @@ def main():
     mobilenet_input = int(args.mobilenet_input) 
 
     # transform the model in a NEMO FakeQuantized representation
-    model = nemo.transform.quantize_pact(model, dummy_input=torch.randn((1,3,mobilenet_input,mobilenet_input)).to('cpu'))
+    model = nemo.transform.quantize_pact(model, "cpu", dummy_input=torch.randn((1,3,mobilenet_input,mobilenet_input)).to('cpu'))
 
     checkpoint_file = args.resume
     if os.path.isfile(checkpoint_file):
@@ -167,7 +167,7 @@ def main():
     remove_bias_dict = {}#{'model.0.1' : 'model.0.2'}
     input_bias       = 0 #math.floor(1.0 / (2./255)) * (2./255)
 
-    model.qd_stage(eps_in=2./255, int_accurate=False)
+    model.qd_stage(device="cpu", eps_in=2./255, int_accurate=False)
     # fix ConstantPad2d
     # model.model[0][0].value = input_bias
 

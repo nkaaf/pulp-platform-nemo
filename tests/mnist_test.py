@@ -156,7 +156,7 @@ At this stage, the network can be trained / fine-tuned (see details in the fine-
 Here, we first transform the model in a *FakeQuantized* version targeting a very relaxed 16-bit quantization for weights and activations. The quantization for each layer can be tweaked by means of a precision dictionary; notice that for weights we actually impose 15 bits instead of 16: this is to take into account the asymmetricity of $\alpha$ and $\beta$.
 """
 
-model = nemo.transform.quantize_pact(model, dummy_input=torch.randn((1,1,28,28)).to(device))
+model = nemo.transform.quantize_pact(model, device, dummy_input=torch.randn((1,1,28,28)).to(device))
 precision = {
     'conv1': {
         'W_bits' : 15
@@ -264,7 +264,7 @@ In the next cell, we bring our MNIST network to this representation, then we tes
 
 state_dict = torch.load('checkpoint/mnist_fq_mixed.pth')['state_dict']
 model.load_state_dict(state_dict, strict=True)
-model.qd_stage(eps_in=1./255)
+model.qd_stage(device=device, eps_in=1./255)
 print(model)
 acc = test(model, device, test_loader)
 print("\nQuantizedDeployable @ mixed-precision accuracy: %.02f%%" % acc)

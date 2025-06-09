@@ -3,8 +3,10 @@
 # Francesco Conti <fconti@iis.ee.ethz.ch>
 # Alfio Di Mauro <adimauro@iis.ee.ethz.ch>
 # Thorir Mar Ingolfsson <thoriri@iis.ee.ethz.ch>
+# Niklas Kaaf <nkaaf@protonmail.com>
 #
 # Copyright (C) 2018-2021 ETH Zurich
+# Copyright (C) 2025 Niklas Kaaf
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,7 +45,7 @@ from nemo.transf.statistics import *
 from nemo.transf.utils import *
 from nemo.transf.sawb import *
 
-def quantize_pact(module, W_bits=4, x_bits=4, dummy_input=None, remove_dropout=False, **kwargs):
+def quantize_pact(module, device, W_bits=4, x_bits=4, dummy_input=None, remove_dropout=False, **kwargs):
     r"""Takes a PyTorch module and makes it quantization-aware with PACT, recursively.
 
     The function follows recursively the data structures containing PyTorch layers (typically as hierarchical lists, e.g.
@@ -69,6 +71,8 @@ def quantize_pact(module, W_bits=4, x_bits=4, dummy_input=None, remove_dropout=F
     - `unset_statistics_act`, setup activation layers to act normally as quantization-aware layers.
     - `reset_alpha_act`, uses the collected activation layer statistics to recalibrate the scaling parameters. 
     
+    :param device: device used for quantization.
+
     :param module: module to be transformed to use PACT quantization (typically, a container like :py:class:`torch.nn.ModuleList`).
     :type  module: `torch.nn.Module`
     
@@ -97,7 +101,7 @@ def quantize_pact(module, W_bits=4, x_bits=4, dummy_input=None, remove_dropout=F
     else:
         module.graph = None
     module.stage = 'fq'
-    module = _hier_quantizer_pact(module, module.graph, **kwargs)
+    module = _hier_quantizer_pact(module, device, module.graph, **kwargs)
     if hasattr(module, 'graph'):
         if module.graph is not None:
             module.graph.rebuild_module_dict()
@@ -181,7 +185,7 @@ def _hier_bn_quantizer(module, **kwargs):
         sigma = torch.sqrt(module.running_var.data[:] + module.eps).clone().detach()
         mu = module.running_mean.data[:].clone().detach()
         dimensions = 1 if module.__class__.__name__ == 'BatchNorm1d' else 2
-        module = PACT_QuantizedBatchNormNd(kappa=gamma/sigma, lamda=beta-gamma/sigma*mu, dimensions=dimensions, **kwargs)
+        module = PACT_QuantizedBatchNormNd(device, kappa=gamma/sigma, lamda=beta-gamma/sigma*mu, dimensions=dimensions, **kwargs)
         return module
     else:
         for n,m in module.named_children():
@@ -224,16 +228,16 @@ def _hier_integerizer(module, **kwargs):
             module._modules[n] = _hier_integerizer(m, **kwargs)
     return module
 
-def _hier_thresholdizer_pact(module):
+def _hier_thresholdizer_pact(module, device):
     if module.__class__.__name__ == 'PACT_Act':
-        module = PACT_ThresholdAct(precision=module.precision, alpha=module.alpha.data[:])
+        module = PACT_ThresholdAct(device, precision=module.precision, alpha=module.alpha.data[:])
         return module
     else:
         for n,m in module.named_children():
-            module._modules[n] = _hier_thresholdizer_pact(m)
+            module._modules[n] = _hier_thresholdizer_pact(m, device)
         return module
 
-def _hier_quantizer_pact(module, graph=None, **kwargs):
+def _hier_quantizer_pact(module, device, graph=None, **kwargs):
     if module.__class__.__name__ == 'Conv2d':
         W = module.weight.data
         try:
@@ -241,6 +245,7 @@ def _hier_quantizer_pact(module, graph=None, **kwargs):
         except AttributeError:
             b = None
         module = PACT_Conv2d(
+            device,
             module.in_channels,
             module.out_channels,
             _single(module.kernel_size),
@@ -283,6 +288,7 @@ def _hier_quantizer_pact(module, graph=None, **kwargs):
         module = PACT_Linear(
             module.in_features,
             module.out_features,
+            device,
             bias=True if module.bias is not None else False
         )
         module.weight.data = W.clone()
@@ -290,17 +296,17 @@ def _hier_quantizer_pact(module, graph=None, **kwargs):
             module.bias.data = b.clone()
         return module
     elif module.__class__.__name__ == 'ReLU6':
-        module = PACT_Act(alpha=6., **kwargs)
+        module = PACT_Act(device, alpha=6., **kwargs)
         return module
     elif module.__class__.__name__ == 'ReLU':
-        module = PACT_Act(**kwargs)
+        module = PACT_Act(device, **kwargs)
         return module
     elif module.__class__.__name__ == 'LeakyReLU':
-        module = PACT_Act(leaky=module.negative_slope, **kwargs)
+        module = PACT_Act(device, leaky=module.negative_slope, **kwargs)
         return module
     else:
         for n,m in module.named_children():
-            module._modules[n] = _hier_quantizer_pact(m, **kwargs)
+            module._modules[n] = _hier_quantizer_pact(m, device, **kwargs)
         return module
 
 def _hier_dequantizer_pact(module):
@@ -386,8 +392,8 @@ def dequantize_pact(module):
             module.graph.rebuild_module_dict()
     return module
 
-def thresholdize_pact(module, act_dict):
-    module = _hier_thresholdizer_pact(module)
+def thresholdize_pact(module, device, act_dict):
+    module = _hier_thresholdizer_pact(module, device)
     module.fold_thresholds(act_dict)
     if hasattr(module, 'graph'):
         if module.graph is not None:
