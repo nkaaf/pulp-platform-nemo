@@ -339,7 +339,7 @@ class PACT_Act(torch.nn.Module):
 
         """
 
-        super(PACT_Act, self).__init__(device)
+        super(PACT_Act, self).__init__()
         if precision is None:
             self.precision = Precision()
         else:

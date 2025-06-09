@@ -245,10 +245,10 @@ def _hier_quantizer_pact(module, device, graph=None, **kwargs):
         except AttributeError:
             b = None
         module = PACT_Conv2d(
-            device,
             module.in_channels,
             module.out_channels,
             _single(module.kernel_size),
+            device,
             stride=_single(module.stride),
             padding=_single(module.padding),
             dilation=_single(module.dilation),

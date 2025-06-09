@@ -2,8 +2,10 @@
 # utils.py
 # Francesco Conti <fconti@iis.ee.ethz.ch>
 # Alfio Di Mauro <adimauro@iis.ee.ethz.ch>
+# Niklas Kaaf <nkaaf@protonmail.com>
 #
-# Copyright (C) 2018-2020 ETH Zurich
+# Copyright (C) 2018-2021 ETH Zurich
+# Copyright (C) 2025 Niklas Kaaf
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -73,11 +75,11 @@ def save_checkpoint(net, optimizer, epoch, acc=0.0, checkpoint_name='net_', chec
         os.mkdir('checkpoint')
     torch.save(state, './checkpoint/%s.pth' % (checkpoint_name))
 
-def export_onnx(file_name, net, net_inner, input_shape, round_params=True, perm=None, redefine_names=False, batch_size=1, verbose=False):
+def export_onnx(file_name, net, net_inner, input_shape, device, round_params=True, perm=None, redefine_names=False, batch_size=1, verbose=False):
     if perm is None:
         perm = lambda x : x
     pattern = re.compile('[\W_]+')
-    dummy_input = perm(torch.randn(batch_size, *input_shape, device='cuda' if torch.cuda.is_available() else 'cpu'))
+    dummy_input = perm(torch.randn(batch_size, *input_shape, device=device))
     net.eval()
     # rounding of parameters to avoid strange numerical errors on writeout
     if round_params:
