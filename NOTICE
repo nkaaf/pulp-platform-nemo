@@ -2,6 +2,7 @@ Following are the changes, that are made to the original implementation:
 
 - nemo/graph.py:
     - Constructor of "DeployGraph" compatible with torch >= 1.10.0
+    - Fix "SyntaxError": "is not" with literal ''
 - nemo/transform.py:
     - Add "device" parameter to quantization steps
 - nemo/utils.py:

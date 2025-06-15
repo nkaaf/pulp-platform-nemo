@@ -48,7 +48,7 @@ def _hier_get_name_from_child(module, child, name):
             return name_plus_n
         elif len(list(m.named_children())) > 0:
             name_child = _hier_get_name_from_child(m, child, name_plus_n)
-            if name_child is not '':
+            if name_child != '':
                 return name_child
     return ''
 
